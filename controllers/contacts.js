@@ -7,7 +7,7 @@ const {
   updateContact,
 } = require("../models/contacts");
 
-const { contactAddShema, contactUpdateShema } = require("../shemas/contacts");
+const { contactShema } = require("../shemas/contacts");
 
 const getAll = async (req, res, next) => {
   try {
@@ -36,7 +36,7 @@ const getById = async (req, res, next) => {
 
 const add = async (req, res, next) => {
   try {
-    const { error } = contactAddShema.validate(req.body);
+    const { error } = contactShema.validate(req.body);
     if (error) {
       throw HttpError(400, "missing required name field");
     }
@@ -64,7 +64,7 @@ const deleteById = async (req, res, next) => {
 
 const updateById = async (req, res, next) => {
   try {
-    const { error } = contactUpdateShema.validate(req.body);
+    const { error } = contactShema.validate(req.body);
     if (error) {
       throw HttpError(400, "missing required name field");
     }
