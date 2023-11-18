@@ -53,7 +53,31 @@ const getCurrent = (req, res, next) => {
 const logout = async (req, res, next) => {
   const { _id } = req.user;
   await User.findByIdAndUpdate(_id, { token: "" });
-  res.status(204)
+  res.status(204);
+};
+
+const updateSubscription = async (req, res, next) => {
+  const { subscription } = req.body;
+  try {
+    if (!req.body) {
+      throw HttpError(400, "missing fields");
+    }
+
+    const contact = await User.findByIdAndUpdate(
+      req.user._id,
+      { subscription },
+      {
+        new: true,
+      }
+    );
+
+    if (contact) {
+      res.status(200).json(contact);
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
 };
 
 module.exports = {
@@ -61,4 +85,5 @@ module.exports = {
   login,
   getCurrent,
   logout,
+  updateSubscription,
 };
