@@ -3,7 +3,11 @@ const Contact = require("../models/contact");
 
 const getAll = async (req, res, next) => {
   try {
-    const result = await Contact.find();
+    const { _id: owner } = req.user;
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+    // const result = await Contact.find({ owner }, {}, { skip, limit });
+    const result = await Contact.find({&or:{owner},{favorite:true} }, {}, { skip, limit });
     res.status(200).json(result);
   } catch (error) {
     next(error);
@@ -25,8 +29,8 @@ const getById = async (req, res, next) => {
 
 const add = async (req, res, next) => {
   try {
-    const newContact = await Contact.create(req.body);
-    console.log(req.body);
+    const { _id: owner } = req.user;
+    const newContact = await Contact.create({ ...req.body, owner });
     res.status(201).json(newContact);
   } catch (error) {
     next(error);
