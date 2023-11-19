@@ -47,7 +47,8 @@ const login = async (req, res, next) => {
 };
 
 const getCurrent = (req, res, next) => {
-  res.json(`Authorization:${req.headers.authorization}`);
+  const { email, subscription } = req.user;
+  res.status(200).json({ email, subscription });
 };
 
 const logout = async (req, res, next) => {
