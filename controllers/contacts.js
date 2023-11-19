@@ -1,4 +1,3 @@
-const { HttpError } = require("../helpers");
 const Contact = require("../models/contact");
 
 const getAll = async (req, res, next) => {
@@ -44,11 +43,8 @@ const deleteById = async (req, res, next) => {
   try {
     const { contactId } = req.params;
 
-    const contact = await Contact.findByIdAndDelete(contactId);
+    await Contact.findByIdAndDelete(contactId);
 
-    if (!contact) {
-      next();
-    }
     res.status(200).json({ message: "contact deleted" });
   } catch (error) {
     next(error);
@@ -57,19 +53,12 @@ const deleteById = async (req, res, next) => {
 
 const updateById = async (req, res, next) => {
   try {
-    if (!req.body) {
-      throw HttpError(400, "missing fields");
-    }
-
     const { contactId } = req.params;
     const contact = await Contact.findByIdAndUpdate(contactId, req.body, {
       new: true,
     });
 
-    if (contact) {
-      res.status(200).json(contact);
-    }
-    next();
+    res.status(200).json(contact);
   } catch (error) {
     next(error);
   }
@@ -77,19 +66,12 @@ const updateById = async (req, res, next) => {
 
 const updateFavorite = async (req, res, next) => {
   try {
-    if (!req.body) {
-      throw HttpError(400, "missing fields");
-    }
-
     const { contactId } = req.params;
     const contact = await Contact.findByIdAndUpdate(contactId, req.body, {
       new: true,
     });
 
-    if (contact) {
-      res.status(200).json(contact);
-    }
-    next();
+    res.status(200).json(contact);
   } catch (error) {
     next(error);
   }
