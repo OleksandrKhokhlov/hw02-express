@@ -1,8 +1,15 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const gravatar = require("gravatar");
+const path = require("node:path");
+const Jimp = require("jimp");
+const fs = require("node:fs/promises");
+
 const User = require("../models/user");
 const { HttpError } = require("../helpers");
 const { SECRET_KEY } = process.env;
+
+const avatarDir = path.join(__dirname, "..", "public", "avatars");
 
 const register = async (req, res, next) => {
   const { password, email } = req.body;
@@ -12,8 +19,9 @@ const register = async (req, res, next) => {
       throw HttpError(409, "Email in use");
     }
     const passwordHash = await bcrypt.hash(password, 10);
+    const avatarURL = gravatar.url(email);
 
-    await User.create({ ...req.body, password: passwordHash });
+    await User.create({ ...req.body, password: passwordHash, avatarURL });
 
     res.status(201).json({ user: { email, subscription: "starter" } });
   } catch (error) {
@@ -81,10 +89,42 @@ const updateSubscription = async (req, res, next) => {
   }
 };
 
+const updateAvatar = async (req, res, next) => {
+  try {
+    const { _id } = req.user;
+    const { path: tmpUpload, originalname } = req.file;
+
+    const filename = `${_id}_${originalname}`;
+    const resultUpload = path.join(avatarDir, filename);
+
+    const avatar = await Jimp.read(tmpUpload);
+    await avatar
+      .autocrop()
+      .cover(
+        250,
+        250,
+        Jimp.HORIZONTAL_ALIGN_CENTER | Jimp.VERTICAL_ALIGN_MIDDLE
+      )
+      .rotate(-90)
+      .writeAsync(tmpUpload);
+
+    await fs.rename(tmpUpload, resultUpload);
+
+    const avatarURL = path.join("avatars", filename);
+
+    await User.findByIdAndUpdate(_id, { avatarURL });
+
+    res.status(200).json({ avatarURL });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
   getCurrent,
   logout,
   updateSubscription,
+  updateAvatar,
 };
