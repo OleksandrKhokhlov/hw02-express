@@ -21,9 +21,13 @@ const register = async (req, res, next) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const avatarURL = gravatar.url(email);
 
-    await User.create({ ...req.body, password: passwordHash, avatarURL });
+    const { subscription } = await User.create({
+      ...req.body,
+      password: passwordHash,
+      avatarURL,
+    });
 
-    res.status(201).json({ user: { email, subscription: "starter" } });
+    res.status(201).json({ user: { email, subscription } });
   } catch (error) {
     next(error);
   }
@@ -46,9 +50,11 @@ const login = async (req, res, next) => {
     }
     const payload = { id: user._id };
     const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "23h" });
+
     await User.findByIdAndUpdate(user._id, { token });
 
-    res.status(200).json({ token, user: { email, subscription: "starter" } });
+    const { subscription } = user;
+    res.status(200).json({ token, user: { email, subscription } });
   } catch (error) {
     next(error);
   }
@@ -72,7 +78,7 @@ const updateSubscription = async (req, res, next) => {
       throw HttpError(400, "missing fields");
     }
 
-    const contact = await User.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
       req.user._id,
       { subscription },
       {
@@ -80,8 +86,8 @@ const updateSubscription = async (req, res, next) => {
       }
     );
 
-    if (contact) {
-      res.status(200).json(contact);
+    if (user) {
+      res.status(200).json(user);
     }
     next();
   } catch (error) {
