@@ -75,7 +75,7 @@ const updateSubscription = async (req, res, next) => {
   const { subscription } = req.body;
   try {
     if (!req.body) {
-      throw HttpError(400, "missing fields");
+      next(HttpError(400, "missing fields"));
     }
 
     const user = await User.findByIdAndUpdate(
@@ -98,6 +98,9 @@ const updateSubscription = async (req, res, next) => {
 const updateAvatar = async (req, res, next) => {
   try {
     const { _id } = req.user;
+    if (!req.file) {
+      next(HttpError(400, "missing fields"));
+    }
     const { path: tmpUpload, originalname } = req.file;
 
     const filename = `${_id}_${originalname}`;
@@ -118,7 +121,7 @@ const updateAvatar = async (req, res, next) => {
 
     const avatarURL = path.join("avatars", filename);
 
-    await User.findByIdAndUpdate(_id, { avatarURL });
+    await User.findByIdAndUpdate(_id, { ...req.user, avatarURL });
 
     res.status(200).json({ avatarURL });
   } catch (error) {
