@@ -1,8 +1,15 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const gravatar = require("gravatar");
+const path = require("node:path");
+const Jimp = require("jimp");
+const fs = require("node:fs/promises");
+
 const User = require("../models/user");
 const { HttpError } = require("../helpers");
 const { SECRET_KEY } = process.env;
+
+const avatarDir = path.join(__dirname, "..", "public", "avatars");
 
 const register = async (req, res, next) => {
   const { password, email } = req.body;
@@ -12,10 +19,15 @@ const register = async (req, res, next) => {
       throw HttpError(409, "Email in use");
     }
     const passwordHash = await bcrypt.hash(password, 10);
+    const avatarURL = gravatar.url(email);
 
-    await User.create({ ...req.body, password: passwordHash });
+    const { subscription } = await User.create({
+      ...req.body,
+      password: passwordHash,
+      avatarURL,
+    });
 
-    res.status(201).json({ user: { email, subscription: "starter" } });
+    res.status(201).json({ user: { email, subscription } });
   } catch (error) {
     next(error);
   }
@@ -38,9 +50,11 @@ const login = async (req, res, next) => {
     }
     const payload = { id: user._id };
     const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "23h" });
+
     await User.findByIdAndUpdate(user._id, { token });
 
-    res.status(200).json({ token, user: { email, subscription: "starter" } });
+    const { subscription } = user;
+    res.status(200).json({ token, user: { email, subscription } });
   } catch (error) {
     next(error);
   }
@@ -61,10 +75,10 @@ const updateSubscription = async (req, res, next) => {
   const { subscription } = req.body;
   try {
     if (!req.body) {
-      throw HttpError(400, "missing fields");
+      next(HttpError(400, "missing fields"));
     }
 
-    const contact = await User.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
       req.user._id,
       { subscription },
       {
@@ -72,10 +86,44 @@ const updateSubscription = async (req, res, next) => {
       }
     );
 
-    if (contact) {
-      res.status(200).json(contact);
+    if (user) {
+      res.status(200).json(user);
     }
     next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateAvatar = async (req, res, next) => {
+  try {
+    const { _id } = req.user;
+    if (!req.file) {
+      next(HttpError(400, "missing fields"));
+    }
+    const { path: tmpUpload, originalname } = req.file;
+
+    const filename = `${_id}_${originalname}`;
+    const resultUpload = path.join(avatarDir, filename);
+
+    const avatar = await Jimp.read(tmpUpload);
+    await avatar
+      .autocrop()
+      .cover(
+        250,
+        250,
+        Jimp.HORIZONTAL_ALIGN_CENTER | Jimp.VERTICAL_ALIGN_MIDDLE
+      )
+      .rotate(-90)
+      .writeAsync(tmpUpload);
+
+    await fs.rename(tmpUpload, resultUpload);
+
+    const avatarURL = path.join("avatars", filename);
+
+    await User.findByIdAndUpdate(_id, { ...req.user, avatarURL });
+
+    res.status(200).json({ avatarURL });
   } catch (error) {
     next(error);
   }
@@ -87,4 +135,5 @@ module.exports = {
   getCurrent,
   logout,
   updateSubscription,
+  updateAvatar,
 };
